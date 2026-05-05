@@ -13,8 +13,7 @@ export default async function ProfilePage() {
   let user = null;
 
   try {
-    const response = await getMe();
-    user = response.data;
+    user = await getMe();
   } catch {
     // User not authenticated, will show default state
   }

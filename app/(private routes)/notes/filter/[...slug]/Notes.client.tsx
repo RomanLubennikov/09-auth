@@ -3,8 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { fetchNotes } from "@/lib/api/clientApi";
 import { Note, NoteTag } from "@/types/note";
+import SearchBox from "@/components/SearchBox/SearchBox";
+import Pagination from "@/components/Pagination/Pagination";
+import NoteList from "@/components/NoteList/NoteList";
 import css from "../../NotesPage.module.css";
 
 interface NotesClientProps {
@@ -98,16 +102,11 @@ export default function NotesClient({
     <div className={css.container}>
       <h1 className={css.title}>Notes</h1>
 
-      {/* Search Box */}
-      <div className={css.searchBox}>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search notes..."
-          className={css.searchInput}
-        />
-      </div>
+      <Link href="/notes/action/create" className={css.createLink}>
+        Create Note
+      </Link>
+
+      <SearchBox value={search} onChange={setSearch} />
 
       {/* Tag Filter */}
       <div className={css.tagFilter}>
@@ -122,42 +121,20 @@ export default function NotesClient({
         ))}
       </div>
 
-      {/* Note List */}
       {isLoading ? (
         <p className={css.loading}>Loading notes...</p>
+      ) : data?.notes && data.notes.length > 0 ? (
+        <NoteList notes={data.notes} />
       ) : (
-        <ul className={css.list}>
-          {data?.notes.map((note) => (
-            <li key={note.id} className={css.item}>
-              <h2>{note.title}</h2>
-              <span className={css.tag}>{note.tag}</span>
-              <p className={css.content}>{note.content}</p>
-            </li>
-          ))}
-        </ul>
+        <p className={css.empty}>No notes found.</p>
       )}
 
-      {/* Pagination */}
       {data && data.totalPages > 1 && (
-        <div className={css.pagination}>
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page <= 1}
-            className={css.pageButton}
-          >
-            Previous
-          </button>
-          <span className={css.pageInfo}>
-            Page {page} of {data.totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page >= data.totalPages}
-            className={css.pageButton}
-          >
-            Next
-          </button>
-        </div>
+        <Pagination
+          pageCount={data.totalPages}
+          currentPage={page}
+          onPageChange={handlePageChange}
+        />
       )}
 
       <p className={css.totalInfo}>Total notes: {data?.total || 0}</p>

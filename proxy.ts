@@ -29,12 +29,31 @@ export async function proxy(request: NextRequest) {
 
     let isAuthenticated = !!accessToken;
 
+    let response = NextResponse.next();
+
     // If accessToken is missing but refreshToken exists, try to refresh session
     if (!accessToken && refreshToken) {
       try {
-        const response = await checkSession();
-        if (response.data) {
+        const sessionResponse = await checkSession();
+        if (sessionResponse.data) {
           isAuthenticated = true;
+
+          // Update cookies with new tokens from session response
+          const setCookieHeader = sessionResponse.headers["set-cookie"];
+          if (setCookieHeader) {
+            const cookieArray = Array.isArray(setCookieHeader)
+              ? setCookieHeader
+              : [setCookieHeader];
+            for (const cookieStr of cookieArray) {
+              const [nameValue] = cookieStr.split(";");
+              const [name, value] = nameValue.split("=");
+              response.cookies.set(name.trim(), value.trim(), {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+              });
+            }
+          }
         }
       } catch {
         isAuthenticated = false;
@@ -51,7 +70,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    return NextResponse.next();
+    return response;
   } catch (error) {
     // If there's an error checking session, assume not authenticated
     if (isPrivateRoute) {
