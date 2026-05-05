@@ -1,39 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const API_BASE_URL = 'https://notehub-api.goit.study';
+import { NextRequest, NextResponse } from "next/server";
+import { api, isAxiosError, logErrorResponse } from "../api";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const cookieHeader = request.headers.get('cookie') || '';
+    const cookieHeader = request.headers.get("cookie") || "";
 
     // Build query parameters
-    const params = new URLSearchParams();
-    if (searchParams.get('search')) params.append('search', searchParams.get('search')!);
-    if (searchParams.get('page')) params.append('page', searchParams.get('page')!);
-    if (searchParams.get('tag')) params.append('tag', searchParams.get('tag')!);
-    params.append('perPage', '12'); // Always set perPage to 12
+    const params: Record<string, string> = {};
+    const search = searchParams.get("search");
+    const page = searchParams.get("page");
+    const tag = searchParams.get("tag");
+    const perPage = searchParams.get("perPage") || "12";
 
-    const response = await fetch(`${API_BASE_URL}/notes?${params.toString()}`, {
-      method: 'GET',
+    if (search) params.search = search;
+    if (page) params.page = page;
+    if (tag && tag !== "All") params.tag = tag;
+    params.perPage = perPage;
+
+    const response = await api.get("/notes", {
+      params,
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookieHeader,
+        Cookie: cookieHeader,
       },
-      credentials: 'include',
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(response.data);
   } catch (error) {
-    console.error('Get notes error:', error);
+    logErrorResponse(error);
+    if (isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -42,29 +43,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const cookieHeader = request.headers.get('cookie') || '';
+    const cookieHeader = request.headers.get("cookie") || "";
 
-    const response = await fetch(`${API_BASE_URL}/notes`, {
-      method: 'POST',
+    const response = await api.post("/notes", body, {
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookieHeader,
+        Cookie: cookieHeader,
       },
-      body: JSON.stringify(body),
-      credentials: 'include',
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(response.data);
   } catch (error) {
-    console.error('Create note error:', error);
+    logErrorResponse(error);
+    if (isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }

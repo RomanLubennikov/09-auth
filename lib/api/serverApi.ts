@@ -1,28 +1,14 @@
 import axios from "axios";
 import { cookies } from "next/headers";
 import { AxiosResponse } from "axios";
-
-// Types
-export interface User {
-  email: string;
-  username: string;
-  avatar: string;
-}
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tag: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { User } from "@/types/user";
+import { Note, NoteTag } from "@/types/note";
 
 export interface FetchNotesParams {
   search?: string;
   page?: number;
   perPage?: number;
-  tag?: string;
+  tag?: NoteTag;
 }
 
 // Create server-side API instance with cookies dynamically
@@ -42,7 +28,14 @@ const createServerApiInstance = async () => {
 // Server-side functions
 export const fetchNotes = async (
   params: FetchNotesParams = {}
-): Promise<AxiosResponse<Note[]>> => {
+): Promise<
+  AxiosResponse<{
+    notes: Note[];
+    totalPages: number;
+    page: number;
+    total: number;
+  }>
+> => {
   const instance = await createServerApiInstance();
   return instance.get("/notes", { params });
 };

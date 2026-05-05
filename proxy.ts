@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { checkSession } from "./lib/api/serverApi";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/sign-in", "/sign-up"];
+  const isPublicAuthRoute = pathname === "/sign-in" || pathname === "/sign-up";
   const isPublicRoute =
     publicRoutes.includes(pathname) ||
     pathname.startsWith("/_next") ||
@@ -20,22 +23,32 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    // Check if user is authenticated by checking cookies directly
-    const cookieHeader = request.headers.get("cookie") || "";
-    const hasSessionCookie =
-      cookieHeader.includes("token=") || cookieHeader.includes("refreshToken=");
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get("accessToken")?.value;
+    const refreshToken = cookieStore.get("refreshToken")?.value;
 
-    // For development, we'll be less strict and allow access
-    const isAuthenticated = hasSessionCookie;
+    let isAuthenticated = !!accessToken;
+
+    // If accessToken is missing but refreshToken exists, try to refresh session
+    if (!accessToken && refreshToken) {
+      try {
+        const response = await checkSession();
+        if (response.data) {
+          isAuthenticated = true;
+        }
+      } catch {
+        isAuthenticated = false;
+      }
+    }
 
     // If trying to access private route without authentication, redirect to sign-in
     if (isPrivateRoute && !isAuthenticated) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    // If authenticated user trying to access public routes, redirect to profile
-    if (isAuthenticated && !isPublicRoute && !isPrivateRoute) {
-      return NextResponse.redirect(new URL("/profile", request.url));
+    // If authenticated user trying to access auth routes, redirect to home
+    if (isAuthenticated && isPublicAuthRoute) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     return NextResponse.next();

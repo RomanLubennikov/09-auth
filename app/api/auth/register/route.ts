@@ -1,41 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const API_BASE_URL = 'https://notehub-api.goit.study';
+import { NextRequest, NextResponse } from "next/server";
+import { api, isAxiosError, logErrorResponse } from "../../api";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
 
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include',
-    });
+    const response = await api.post("/auth/register", body);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    
     // Forward cookies from the external API
-    const setCookieHeader = response.headers.get('set-cookie');
+    const setCookieHeader = response.headers["set-cookie"];
     if (setCookieHeader) {
       const headers = new Headers();
-      headers.append('set-cookie', setCookieHeader);
-      return NextResponse.json(data, { headers });
+      if (Array.isArray(setCookieHeader)) {
+        setCookieHeader.forEach((cookie) => {
+          headers.append("set-cookie", cookie);
+        });
+      } else {
+        headers.append("set-cookie", setCookieHeader);
+      }
+      return NextResponse.json(response.data, { headers });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(response.data);
   } catch (error) {
-    console.error('Register error:', error);
+    logErrorResponse(error);
+    if (isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }

@@ -1,9 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Metadata } from "next";
+import { getMe } from "@/lib/api/serverApi";
 import css from "./page.module.css";
 
-export default function ProfilePage() {
-  // For now, show a simple profile page without authentication
+export const metadata: Metadata = {
+  title: "Profile | NoteHub",
+  description: "User profile page",
+};
+
+export default async function ProfilePage() {
+  let user = null;
+
+  try {
+    const response = await getMe();
+    user = response.data;
+  } catch {
+    // User not authenticated, will show default state
+  }
+
   return (
     <main className={css.mainContent}>
       <div className={css.profileCard}>
@@ -15,7 +30,7 @@ export default function ProfilePage() {
         </div>
         <div className={css.avatarWrapper}>
           <Image
-            src="/avatar.svg"
+            src={user?.avatar || "/avatar.svg"}
             alt="User Avatar"
             width={120}
             height={120}
@@ -23,8 +38,8 @@ export default function ProfilePage() {
           />
         </div>
         <div className={css.profileInfo}>
-          <p>Username: Guest User</p>
-          <p>Email: guest@example.com</p>
+          <p>Username: {user?.username || "Guest User"}</p>
+          <p>Email: {user?.email || "guest@example.com"}</p>
         </div>
       </div>
     </main>
