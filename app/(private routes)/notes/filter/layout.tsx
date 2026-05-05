@@ -1,1 +1,5 @@
-// Placeholder for filter layout - will be moved from existing filter folder
+import { ReactNode } from "react";
+
+export default function FilterLayout({ children }: { children: ReactNode }) {
+  return children;
+}
