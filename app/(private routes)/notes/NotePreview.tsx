@@ -32,4 +32,3 @@ export default function NotePreview({ id }: NotePreviewProps) {
     </div>
   );
 }
-
