@@ -5,8 +5,7 @@ import { checkSession } from "./lib/api/serverApi";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require authentication
-  const publicRoutes = ["/", "/sign-in", "/sign-up"];
+  // Public auth routes
   const isPublicAuthRoute = pathname === "/sign-in" || pathname === "/sign-up";
 
   // Private routes that require authentication
@@ -86,14 +85,13 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Return response with updated cookies only if session was refreshed
-    // and user is accessing private route
-    if (sessionRefreshed && isPrivateRoute) {
+    // Return response with updated cookies if session was refreshed
+    if (sessionRefreshed) {
       return response;
     }
 
     return NextResponse.next();
-  } catch (error) {
+  } catch {
     // If there's an error checking session, assume not authenticated
     if (isPrivateRoute) {
       return NextResponse.redirect(new URL("/sign-in", request.url));

@@ -56,7 +56,7 @@ export default function NotesClient({
     queryKey: [
       "notes",
       {
-        tag: tag === "All" ? undefined : tag,
+        tag: tag === "All" ? "" : tag,
         search: debouncedSearch,
         page,
         perPage: 12,
@@ -64,8 +64,8 @@ export default function NotesClient({
     ],
     queryFn: async () => {
       const res = await fetchNotes({
-        tag: tag === "All" ? undefined : (tag as NoteTag),
-        search: debouncedSearch || undefined,
+        tag: (tag === "All" ? "" : tag) as NoteTag,
+        search: debouncedSearch || "",
         page,
         perPage: 12,
       });

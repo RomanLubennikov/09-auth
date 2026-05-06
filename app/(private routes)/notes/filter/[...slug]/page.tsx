@@ -22,7 +22,7 @@ export default async function FilterPage({ params }: FilterPageProps) {
     queryKey: [
       "notes",
       {
-        tag: tagValue === "All" ? undefined : tag,
+        tag: tagValue === "All" ? "" : tag,
         search,
         page: 1,
         perPage: 12,
@@ -30,8 +30,8 @@ export default async function FilterPage({ params }: FilterPageProps) {
     ],
     queryFn: () =>
       fetchNotes({
-        tag,
-        search: search || undefined,
+        tag: (tagValue === "All" ? "" : tag) as NoteTag,
+        search: search || "",
         page: 1,
         perPage: 12,
       }),
