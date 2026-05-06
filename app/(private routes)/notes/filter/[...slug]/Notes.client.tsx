@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useDebounce } from "use-debounce";
 import { fetchNotes } from "@/lib/api/clientApi";
 import { NoteTag } from "@/types/note";
 import SearchBox from "@/components/SearchBox/SearchBox";
@@ -12,8 +13,8 @@ import NoteList from "@/components/NoteList/NoteList";
 import css from "../../NotesPage.module.css";
 
 interface NotesClientProps {
-  initialTag: NoteTag | string;
-  initialSearch: string;
+  initialTag?: NoteTag | string;
+  initialSearch?: string;
 }
 
 const TAGS: (NoteTag | "All")[] = [
@@ -30,21 +31,18 @@ export default function NotesClient({
   initialSearch,
 }: NotesClientProps) {
   const router = useRouter();
+  const params = useParams();
+  const slug = (params.slug as string[]) || [];
 
-  const [search, setSearch] = useState(initialSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const tagFromUrl = slug[0] || "All";
+  const searchFromUrl = slug[1] || "";
+
+  const [search, setSearch] = useState(initialSearch || searchFromUrl);
+  const [debouncedSearch] = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [tag, setTag] = useState<NoteTag | "All">(
-    (initialTag as NoteTag | "All") || "All"
+    (initialTag || tagFromUrl) as NoteTag | "All"
   );
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Update URL when filters change
   useEffect(() => {
