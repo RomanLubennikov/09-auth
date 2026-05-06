@@ -18,7 +18,7 @@ const getCookieHeader = async () => {
 // Server-side functions
 export const fetchNotes = async (params: FetchNotesParams = {}) => {
   const cookieHeader = await getCookieHeader();
-  return apiInstance.get<{
+  const response = await apiInstance.get<{
     notes: Note[];
     totalPages: number;
     page: number;
@@ -27,6 +27,7 @@ export const fetchNotes = async (params: FetchNotesParams = {}) => {
     params,
     headers: { Cookie: cookieHeader },
   });
+  return response.data;
 };
 
 export const fetchNoteById = async (id: string): Promise<Note> => {

@@ -2,20 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchNotes } from "@/lib/api/clientApi";
-import { Note, NoteTag } from "@/types/note";
+import { NoteTag } from "@/types/note";
 import SearchBox from "@/components/SearchBox/SearchBox";
 import Pagination from "@/components/Pagination/Pagination";
 import NoteList from "@/components/NoteList/NoteList";
 import css from "../../NotesPage.module.css";
 
 interface NotesClientProps {
-  initialNotes: Note[];
-  initialTotalPages: number;
-  initialPage: number;
-  initialTotal: number;
   initialTag: NoteTag | string;
   initialSearch: string;
 }
@@ -30,20 +26,14 @@ const TAGS: (NoteTag | "All")[] = [
 ];
 
 export default function NotesClient({
-  initialNotes,
-  initialTotalPages,
-  initialPage,
-  initialTotal,
   initialTag,
   initialSearch,
 }: NotesClientProps) {
   const router = useRouter();
-  const params = useParams();
-  const slug = (params.slug as string[]) || [];
 
   const [search, setSearch] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-  const [page, setPage] = useState(initialPage);
+  const [page, setPage] = useState(1);
   const [tag, setTag] = useState<NoteTag | "All">(
     (initialTag as NoteTag | "All") || "All"
   );
@@ -80,12 +70,6 @@ export default function NotesClient({
         perPage: 12,
       });
       return res.data;
-    },
-    initialData: {
-      notes: initialNotes,
-      totalPages: initialTotalPages,
-      page: initialPage,
-      total: initialTotal,
     },
   });
 

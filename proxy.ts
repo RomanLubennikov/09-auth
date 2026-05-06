@@ -8,17 +8,17 @@ export async function proxy(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/sign-in", "/sign-up"];
   const isPublicAuthRoute = pathname === "/sign-in" || pathname === "/sign-up";
-  const isPublicRoute =
-    publicRoutes.includes(pathname) ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api");
 
   // Private routes that require authentication
   const isPrivateRoute =
     pathname.startsWith("/profile") || pathname.startsWith("/notes");
 
-  // Skip authentication check for API routes to avoid infinite loop
-  if (pathname.startsWith("/api")) {
+  // Skip authentication check for API routes and static assets
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon")
+  ) {
     return NextResponse.next();
   }
 
@@ -28,8 +28,8 @@ export async function proxy(request: NextRequest) {
     const refreshToken = cookieStore.get("refreshToken")?.value;
 
     let isAuthenticated = !!accessToken;
-
-    let response = NextResponse.next();
+    let sessionRefreshed = false;
+    const response = NextResponse.next();
 
     // If accessToken is missing but refreshToken exists, try to refresh session
     if (!accessToken && refreshToken) {
@@ -37,6 +37,7 @@ export async function proxy(request: NextRequest) {
         const sessionResponse = await checkSession();
         if (sessionResponse.data) {
           isAuthenticated = true;
+          sessionRefreshed = true;
 
           // Update cookies with new tokens from session response
           const setCookieHeader = sessionResponse.headers["set-cookie"];
@@ -45,13 +46,28 @@ export async function proxy(request: NextRequest) {
               ? setCookieHeader
               : [setCookieHeader];
             for (const cookieStr of cookieArray) {
-              const [nameValue] = cookieStr.split(";");
-              const [name, value] = nameValue.split("=");
-              response.cookies.set(name.trim(), value.trim(), {
+              const parts = cookieStr.split(";");
+              const [name, value] = parts[0].split("=");
+              const options: Record<string, unknown> = {
                 httpOnly: true,
                 sameSite: "lax",
                 path: "/",
-              });
+              };
+
+              for (const part of parts.slice(1)) {
+                const trimmed = part.trim();
+                if (trimmed.toLowerCase() === "secure") {
+                  options.secure = true;
+                } else if (trimmed.toLowerCase().startsWith("expires=")) {
+                  const expiresValue = trimmed.slice(8);
+                  options.expires = new Date(expiresValue);
+                } else if (trimmed.toLowerCase().startsWith("max-age=")) {
+                  const maxAge = parseInt(trimmed.slice(8), 10);
+                  options.maxAge = maxAge;
+                }
+              }
+
+              response.cookies.set(name.trim(), value.trim(), options);
             }
           }
         }
@@ -70,7 +86,13 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    return response;
+    // Return response with updated cookies only if session was refreshed
+    // and user is accessing private route
+    if (sessionRefreshed && isPrivateRoute) {
+      return response;
+    }
+
+    return NextResponse.next();
   } catch (error) {
     // If there's an error checking session, assume not authenticated
     if (isPrivateRoute) {
